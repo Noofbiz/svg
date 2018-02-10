@@ -25,7 +25,7 @@ func main() {
 
 	xScaleFactor := 1.0
 	yScaleFactor := 1.0
-	img, err := svgDecoder.Decode(in, xScaleFactor, yScaleFactor)
+	img, err := svg.Decode(in, xScaleFactor, yScaleFactor)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
@@ -37,11 +37,19 @@ This will *eventually* return an image.Image of the svg at the provided scale.
 To Do:
 
 [] Setup Viewport
+
 [] Groups
+
 [] Rects
+
 [] Circle
+
 [] Ellipse
+
 [] Polygons
+
 [] Lines
+
 [] Curves
+
 [] More tags coming!

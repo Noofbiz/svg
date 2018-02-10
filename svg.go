@@ -9,6 +9,7 @@ type svg struct {
 	dst            *image.RGBA
 	scaleX, scaleY float64
 	svgCount       int
+	viewport, user coordinateSystem
 }
 
 func parseSVG(b []byte, scaleX, scaleY float64) (image.Image, error) {
@@ -50,7 +51,7 @@ loop:
 			switch tok.Name.Local {
 			case "svg":
 				s.svgCount++
-				setViewport(attrs["width"], attrs["height"], attrs["viewBox"])
+				s.setViewport(attrs["x"], attrs["y"], attrs["width"], attrs["height"], attrs["viewBox"])
 			}
 		case xml.EndElement:
 			switch tok.Name.Local {
