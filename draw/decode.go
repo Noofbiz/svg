@@ -1,10 +1,11 @@
-package svg
+package draw
 
 import (
 	"errors"
 	"image"
 	"io"
-	"io/ioutil"
+
+	"github.com/Noofbiz/svg"
 )
 
 // Decode takes in an svg file and outputs an image.Image
@@ -25,13 +26,13 @@ func Decode(r io.Reader, scaleX, scaleY float64) (image.Image, error) {
 		scaleY = scaleX
 	}
 
-	var buf []byte
-	if buf, err = ioutil.ReadAll(r); err != nil {
+	var cmd []svg.Command
+	if cmd, err = svg.ParseSVG(r); err != nil {
 		return nil, err
 	}
 
 	var img image.Image
-	if img, err = parseSVG(buf, scaleX, scaleY); err != nil {
+	if img, err = drawSVG(cmd, scaleX, scaleY); err != nil {
 		return nil, err
 	}
 
