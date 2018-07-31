@@ -35,7 +35,6 @@ func init() {
 		return nil
 	}
 	drawFuncs[svg.A] = func(m map[string]string) error {
-		fmt.Println("hello")
 		return nil
 	}
 	drawFuncs[svg.ALT_GLYPH] = func(m map[string]string) error {
@@ -87,7 +86,6 @@ func init() {
 		return nil
 	}
 	drawFuncs[svg.DESC] = func(m map[string]string) error {
-		fmt.Println("hello")
 		return nil
 	}
 	drawFuncs[svg.ELLIPSE] = func(m map[string]string) error {
@@ -223,7 +221,6 @@ func init() {
 		return nil
 	}
 	drawFuncs[svg.G] = func(m map[string]string) error {
-		fmt.Println("hello")
 		return nil
 	}
 	drawFuncs[svg.GLYPH] = func(m map[string]string) error {
@@ -243,7 +240,6 @@ func init() {
 		return nil
 	}
 	drawFuncs[svg.LINE] = func(m map[string]string) error {
-		fmt.Println("hello")
 		return nil
 	}
 	drawFuncs[svg.LINEAR_GRADIENT] = func(m map[string]string) error {

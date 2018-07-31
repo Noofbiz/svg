@@ -50,9 +50,8 @@ func getLengthUnits(s string, t convertType) (svgLengthUnit, int) {
 	default:
 		if t == width {
 			return defaultXUnit, 0
-		} else {
-			return defaultYUnit, 0
 		}
+		return defaultYUnit, 0
 	}
 }
 

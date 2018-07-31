@@ -1,38 +1,22 @@
 # svg
-SVG decoder using draw2d.
+A simple SVG decoder.
 
-Right now it doesn't do anything! Yay!
-
-To use:
+It has been redesigned to do just that. Pass it an svg file as an io.Reader
 
 ```go
-package main
-
-import (
-	"log"
-	"os"
-
-	"github.com/Noofbiz/svg"
-)
-
-func main() {
-	var err error
-
-	var in *os.File
-	if in, err = os.Open("./in.svg"); err != nil {
-		log.Fatal(err.Error())
-	}
-
-	xScaleFactor := 1.0
-	yScaleFactor := 1.0
-	img, err := svg.Decode(in, xScaleFactor, yScaleFactor)
-	if err != nil {
-		log.Fatal(err.Error())
-	}
+var cmd []svg.Command
+var err error
+if cmd, err = svg.ParseSVG(r); err != nil {
+	fmt.Println(err.Error())
 }
 ```
 
-This will *eventually* return an image.Image of the svg at the provided scale.
+and the `[]svg.Command` is the step-by-step list of commands and styles you can
+use to generate the svg image.
+
+The package `svg/draw` uses this list to generate an image.Image by utilizing
+`draw2d`, but you can implement your own drawing methods if you want to only use
+the `svg` package, for example you can draw directly on an OpenGL surface.
 
 To Do:
 
