@@ -14,7 +14,7 @@ if cmd, err = svg.ParseSVG(r); err != nil {
 and the `[]svg.Command` is the step-by-step list of commands and styles you can
 use to generate the svg image.
 
-The package `svg/draw` uses this list to generate an image.Image by utilizing
+The package `svg/drawsvg` uses this list to generate an image.Image by utilizing
 `draw2d`, but you can implement your own drawing methods if you want to only use
 the `svg` package, for example you can draw directly on an OpenGL surface.
 

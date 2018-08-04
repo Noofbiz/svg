@@ -41,6 +41,7 @@ func (s *svg) UnmarshalXML(decoder *xml.Decoder, start xml.StartElement) error {
 	if start.Name.Local == svgstr {
 		inSVG = true
 		attrs := make(map[string]string)
+		attrs["fill"] = "black"
 		for _, attr := range start.Attr {
 			attrs[attr.Name.Local] = attr.Value
 		}
@@ -64,6 +65,7 @@ loop:
 				if tok.Name.Local != svgstr {
 					continue loop
 				}
+				attrs["fill"] = "black"
 				inSVG = true
 			}
 			if len(ctx) != 0 {
@@ -78,26 +80,57 @@ loop:
 			if tok.Name.Local == svgstr {
 				s.svgCount++
 			}
+			if tok.Name.Local == "g" || tok.Name.Local == "text" {
+				c, ok := cmds[tok.Name.Local]
+				if !ok {
+					return errors.New(tok.Name.Local + " was not recognized as an svg element")
+				}
+				s.commands = append(s.commands, Command{
+					C:     c,
+					Style: attrs,
+				})
+			}
 		case xml.EndElement:
 			if !inSVG {
+				continue loop
+			}
+			if tok.Name.Local == "text" {
 				continue loop
 			}
 			c, ok := cmds[tok.Name.Local]
 			if !ok {
 				return errors.New(tok.Name.Local + " was not recognized as an svg element")
 			}
+			attrs := make(map[string]string)
+			for k, v := range ctx[len(ctx)-1] {
+				attrs[k] = v
+			}
+			if tok.Name.Local == "g" {
+				attrs["end"] = ""
+			}
 			s.commands = append(s.commands, Command{
 				C:     c,
-				Style: ctx[len(ctx)-1],
+				Style: attrs,
 			})
-
 			if tok.Name.Local == svgstr {
 				s.svgCount--
 				if s.svgCount == 0 {
 					break loop
 				}
 			}
-			ctx = ctx[0 : len(ctx)-1]
+			ctx = ctx[:len(ctx)-1]
+		case xml.CharData:
+			if s.commands[len(s.commands)-1].C == TEXT {
+				attrs := make(map[string]string)
+				for k, v := range ctx[len(ctx)-1] {
+					attrs[k] = v
+				}
+				attrs["InnerText"] = string([]byte(tok))
+				s.commands = append(s.commands, Command{
+					C:     InnerText,
+					Style: attrs,
+				})
+			}
 		}
 	}
 	return nil

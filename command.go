@@ -88,6 +88,7 @@ const (
 	USE
 	VIEW
 	V_KERN
+	InnerText
 )
 
 var cmds = map[string]Cmd{
