@@ -1,5 +1,6 @@
 # svg
-A simple SVG decoder.
+A simple SVG decoder. Attempts to be as close to the
+[SVG Specification V1.1](https://www.w3.org/TR/SVG11/) as possible.
 
 It has been redesigned to do just that. Pass it an svg file as an io.Reader
 

@@ -8,8 +8,12 @@ import (
 )
 
 type svg struct {
-	commands []Command
-	svgCount int
+	commands     []Command
+	svgCount     int
+	useChannels  bool
+	cmdCh        chan Command
+	errCh        chan error
+	getInnerText bool
 }
 
 const svgstr string = "svg"
@@ -34,6 +38,31 @@ func ParseSVG(r io.Reader) ([]Command, error) {
 	return s.commands, nil
 }
 
+//ParseSVGChannel parses the SVG file on a separate goroutine and returns a channel
+//to receive the draw commands on.
+func ParseSVGChannel(r io.Reader) (chan Command, chan error) {
+	s := new(svg)
+	s.cmdCh = make(chan Command, 10)
+	s.errCh = make(chan error)
+	s.useChannels = true
+
+	go func(r io.Reader, s *svg) {
+		var buf []byte
+		var err error
+		if buf, err = ioutil.ReadAll(r); err != nil {
+			s.errCh <- err
+			return
+		}
+
+		if err = xml.Unmarshal(buf, s); err != nil {
+			s.errCh <- err
+			return
+		}
+	}(r, s)
+
+	return s.cmdCh, s.errCh
+}
+
 //UnmarshalXML implements the xml.Unmarshaler interface
 func (s *svg) UnmarshalXML(decoder *xml.Decoder, start xml.StartElement) error {
 	var err error
@@ -45,10 +74,17 @@ func (s *svg) UnmarshalXML(decoder *xml.Decoder, start xml.StartElement) error {
 		for _, attr := range start.Attr {
 			attrs[attr.Name.Local] = attr.Value
 		}
-		s.commands = append(s.commands, Command{
-			C:     cmds[svgstr],
-			Style: attrs,
-		})
+		if s.useChannels {
+			s.cmdCh <- Command{
+				C:     cmds[svgstr],
+				Style: attrs,
+			}
+		} else {
+			s.commands = append(s.commands, Command{
+				C:     cmds[svgstr],
+				Style: attrs,
+			})
+		}
 		ctx = append(ctx, attrs)
 		s.svgCount++
 	}
@@ -65,7 +101,6 @@ loop:
 				if tok.Name.Local != svgstr {
 					continue loop
 				}
-				attrs["fill"] = "black"
 				inSVG = true
 			}
 			if len(ctx) != 0 {
@@ -80,21 +115,32 @@ loop:
 			if tok.Name.Local == svgstr {
 				s.svgCount++
 			}
-			if tok.Name.Local == "g" || tok.Name.Local == "text" {
+			if shouldGrabStartTag(tok.Name.Local) {
 				c, ok := cmds[tok.Name.Local]
 				if !ok {
 					return errors.New(tok.Name.Local + " was not recognized as an svg element")
 				}
-				s.commands = append(s.commands, Command{
-					C:     c,
-					Style: attrs,
-				})
+				if tok.Name.Local == "text" {
+					s.getInnerText = true
+				}
+				if s.useChannels {
+					s.cmdCh <- Command{
+						C:     c,
+						Style: attrs,
+					}
+				} else {
+					s.commands = append(s.commands, Command{
+						C:     c,
+						Style: attrs,
+					})
+				}
 			}
 		case xml.EndElement:
 			if !inSVG {
 				continue loop
 			}
-			if tok.Name.Local == "text" {
+			if shouldGetInnerText(tok.Name.Local) {
+				s.getInnerText = false
 				continue loop
 			}
 			c, ok := cmds[tok.Name.Local]
@@ -105,13 +151,20 @@ loop:
 			for k, v := range ctx[len(ctx)-1] {
 				attrs[k] = v
 			}
-			if tok.Name.Local == "g" {
+			if shouldMarkEndTag(tok.Name.Local) {
 				attrs["end"] = ""
 			}
-			s.commands = append(s.commands, Command{
-				C:     c,
-				Style: attrs,
-			})
+			if s.useChannels {
+				s.cmdCh <- Command{
+					C:     c,
+					Style: attrs,
+				}
+			} else {
+				s.commands = append(s.commands, Command{
+					C:     c,
+					Style: attrs,
+				})
+			}
 			if tok.Name.Local == svgstr {
 				s.svgCount--
 				if s.svgCount == 0 {
@@ -120,18 +173,60 @@ loop:
 			}
 			ctx = ctx[:len(ctx)-1]
 		case xml.CharData:
-			if s.commands[len(s.commands)-1].C == TEXT {
+			if s.getInnerText {
 				attrs := make(map[string]string)
 				for k, v := range ctx[len(ctx)-1] {
 					attrs[k] = v
 				}
 				attrs["InnerText"] = string([]byte(tok))
-				s.commands = append(s.commands, Command{
-					C:     InnerText,
-					Style: attrs,
-				})
+				if s.useChannels {
+					s.cmdCh <- Command{
+						C:     InnerText,
+						Style: attrs,
+					}
+				} else {
+					s.commands = append(s.commands, Command{
+						C:     InnerText,
+						Style: attrs,
+					})
+				}
 			}
 		}
 	}
 	return nil
+}
+
+func shouldGrabStartTag(s string) bool {
+	tags := []string{
+		"g",
+		"text",
+		"defs",
+		"symbol",
+	}
+	return inList(s, tags)
+}
+
+func shouldGetInnerText(s string) bool {
+	tags := []string{
+		"text",
+	}
+	return inList(s, tags)
+}
+
+func shouldMarkEndTag(s string) bool {
+	tags := []string{
+		"g",
+		"defs",
+		"symbol",
+	}
+	return inList(s, tags)
+}
+
+func inList(s string, list []string) bool {
+	for _, l := range list {
+		if l == s {
+			return true
+		}
+	}
+	return false
 }
